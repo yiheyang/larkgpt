@@ -22,5 +22,10 @@ cp .env.example .env
 ```bash
 yarn start # or `npm start`
 ```
+## Command
+```text
+/reset # Reset user's session context
+/img <prompt> # Generate an image with the given prompt
+```
 ## LICENCE
 This project is under the protection of MIT license.
