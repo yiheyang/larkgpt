@@ -61,10 +61,7 @@ async function getOpenAIReply (content: string) {
 const eventDispatcher = new lark.EventDispatcher({
   encryptKey: env.LARK_ENCRYPT_KEY
 }).register({
-  'verification': async (data: any) => {
-    console.log(data)
-  },
-  'im.message.receive_v1': async (data: any) => {
+  'im.message.receive_v1': async (data) => {
     const { event_id } = data
 
     // 对于同一个事件，只处理一次
@@ -104,9 +101,11 @@ const eventDispatcher = new lark.EventDispatcher({
     }
     return { code: 0 }
   }
-} as any)
+})
 
-app.use('/', lark.adaptExpress(eventDispatcher))
+app.use('/', lark.adaptExpress(eventDispatcher, {
+  autoChallenge: true
+}))
 
 app.listen(env.PORT, () => {
   console.log(`LarkGPT is now listening on port ${env.PORT}`)
