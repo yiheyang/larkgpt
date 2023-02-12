@@ -51,11 +51,11 @@ async function createCompletion (userID: string, question: string) {
   console.info(`[Lark] Receive from ${userID}: ${question}`)
 
   try {
-    const tempSession: [string, string][] = cache.get(`session:${userID}`) || []
+    let session: [string, string][] = cache.get(`session:${userID}`) || []
     let promptHead = `${INIT_COMMAND}\n\n`
     let prompt = ''
-    for (let index = tempSession.length - 1; index >= 0; index--) {
-      const [q, a] = tempSession[index]
+    for (let index = session.length - 1; index >= 0; index--) {
+      const [q, a] = session[index]
       const tempPrompt = `Human: ${q}\nAI: ${a}\n` + prompt
       const finalPrompt = promptHead + tempPrompt + `Human: ${question}\nAI: `
       if (getTokenLength(finalPrompt) <= MAX_TOKEN_LENGTH -
@@ -82,8 +82,8 @@ async function createCompletion (userID: string, question: string) {
 
     // save to session with 1 day ttl
     // need to get the latest data again
-    const session: [string, string][] = cache.get(`session:${userID}`) || []
-    session.push(...tempSession)
+    session = cache.get(`session:${userID}`) || []
+    session.push([question, answer])
     cache.set(`session:${userID}`, session, 3600 * 24)
 
     return answer
