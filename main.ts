@@ -54,9 +54,8 @@ async function createCompletion (userID: string, question: string) {
     const session: [string, string][] = cache.get(`session:${userID}`) || []
     let promptHead = `${INIT_COMMAND}\n\n`
     let prompt = ''
-    const reverseSession = session.reverse()
-    for (const index in reverseSession) {
-      const [q, a] = reverseSession[index]
+    for (let index = session.length - 1; index >= 0; index--) {
+      const [q, a] = session[index]
       const tempPrompt = `Human: ${q}\nAI: ${a}\n` + prompt
       const finalPrompt = promptHead + tempPrompt + `Human: ${question}\nAI: `
       if (getTokenLength(finalPrompt) <= MAX_TOKEN_LENGTH -
