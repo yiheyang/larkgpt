@@ -51,7 +51,7 @@ async function createCompletion (userID: string, question: string) {
   console.info(`[Lark] Receive from ${userID}: ${question}`)
 
   try {
-    const session: [string, string][] = cache.get(`session:${userID}`) || []
+    let session: [string, string][] = cache.get(`session:${userID}`) || []
     let promptHead = `${INIT_COMMAND}\n\n`
     let prompt = ''
     for (let index = session.length - 1; index >= 0; index--) {
@@ -81,6 +81,8 @@ async function createCompletion (userID: string, question: string) {
     console.info(`[OpenAI] Reply to ${userID}: ${answer}`)
 
     // save to session with 1 day ttl
+    // need to get the latest data again
+    session = cache.get(`session:${userID}`) || []
     session.push([question, answer])
     cache.set(`session:${userID}`, session, 3600 * 24)
 
