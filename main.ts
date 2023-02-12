@@ -61,6 +61,9 @@ async function getOpenAIReply (content: string) {
 const eventDispatcher = new lark.EventDispatcher({
   encryptKey: env.LARK_ENCRYPT_KEY
 }).register({
+  'verification': async (data: any) => {
+    console.log(data)
+  },
   'im.message.receive_v1': async (data: any) => {
     const { event_id } = data
 
@@ -101,18 +104,7 @@ const eventDispatcher = new lark.EventDispatcher({
     }
     return { code: 0 }
   }
-})
-
-app.use('/', (req, res, next) => {
-  // 处理飞书开放平台的服务端校验
-  console.log(req.body, req.query)
-  if (req.body.type == 'url_verification') {
-    return res.send({
-      challenge: req.body.challenge
-    })
-  }
-  next()
-})
+} as any)
 
 app.use('/', lark.adaptExpress(eventDispatcher))
 
