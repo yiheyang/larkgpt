@@ -153,7 +153,7 @@ async function createImage (userID: string, prompt: string) {
     const result = await openai.createImage({
       prompt: prompt,
       n: 1,
-      size: '256x256'
+      size: '1024x1024'
     })
     const url = result.data.data[0].url || ''
     if (!url) throw new Error('Failed to create image.')
