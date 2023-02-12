@@ -4,6 +4,7 @@ import bodyParser from 'body-parser'
 import { Configuration, OpenAIApi } from 'openai'
 import nodeCache from 'node-cache'
 import dotenv from 'dotenv'
+import { encode } from 'gpt-3-encoder'
 
 const cache = new nodeCache()
 
@@ -24,11 +25,14 @@ const configuration = new Configuration({
 })
 const openai = new OpenAIApi(configuration)
 
-// 回复消息
-async function reply (messageId: string, content: string) {
+const MAX_TOKEN_LENGTH = 4096
+const MAX_GENERATE_TOKEN_LENGTH = 1024
+const INIT_COMMAND = 'The following is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly.'
+
+async function reply (messageID: string, content: string) {
   return await client.im.message.reply({
     path: {
-      message_id: messageId
+      message_id: messageID
     },
     data: {
       content: JSON.stringify({
@@ -39,29 +43,61 @@ async function reply (messageId: string, content: string) {
   })
 }
 
-// 通过 OpenAI API 获取回复
-async function getOpenAIReply (content: string) {
-  const prompt = 'Q: ' + content + '\nA: '
+function getTokenLength (content: string) {
+  return encode(content).length
+}
+
+async function createCompletion (userID: string, question: string) {
+  console.info(`[Lark] Receive from ${userID}: ${question}`)
 
   try {
+    const session: [string, string][] = cache.get(`session:${userID}`) || []
+    let promptHead = `${INIT_COMMAND}\n\n`
+    let prompt = ''
+    for (const item in session.reverse()) {
+      const [q, a] = item
+      const tempPrompt = `Human: ${q}\nAI: ${a}\n` + prompt
+      const finalPrompt = promptHead + tempPrompt + `Human: ${question}\n`
+      if (getTokenLength(finalPrompt) <= MAX_TOKEN_LENGTH -
+        MAX_GENERATE_TOKEN_LENGTH) {
+        prompt = tempPrompt
+      } else break
+    }
+
+    const finalPrompt = promptHead + prompt + `Human: ${question}\n`
+
     const result = await openai.createCompletion({
       model: 'text-davinci-003',
-      prompt: prompt,
-      max_tokens: 1200,
+      prompt: finalPrompt,
+      max_tokens: MAX_GENERATE_TOKEN_LENGTH,
       temperature: 0.9,
       top_p: 1,
       frequency_penalty: 0.0,
-      presence_penalty: 0.0,
-      stop: ['\n\n\n'],
-      stream: false
+      presence_penalty: 0.6,
+      stop: ['Human:', 'AI:']
     })
-    result.status
-    return result.data.choices[0].text!.replace('\n\n', '').trim()
+    const answer = result.data.choices[0].text!.trim()
+    console.info(`[OpenAI] Reply to ${userID}: ${answer}`)
+
+    // save to session with 1 day ttl
+    session.push([question, answer])
+    cache.set(`session:${userID}`, session, 3600 * 24)
+
+    return answer
   } catch (error: any) {
     if (error.response) {
-      return `[ERROR:${error.response.status}] ${JSON.stringify(error.response.data)}`
+      const errorMessage = `[ERROR:${error.response.status}] ${JSON.stringify(
+        error.response.data)}`
+      console.warn(errorMessage)
+      return errorMessage
+    } else if (error.message) {
+      const errorMessage = `[ERROR] ${error.message}`
+      console.warn(errorMessage)
+      return errorMessage
     } else {
-      return `[ERROR] ${error.message}`
+      const errorMessage = `[ERROR] LarkGPT is unavailable now. Please try again later.`
+      console.warn(`[ERROR] Unknown error occurred.`)
+      return errorMessage
     }
   }
 }
@@ -70,42 +106,40 @@ const eventDispatcher = new lark.EventDispatcher({
   encryptKey: env.LARK_ENCRYPT_KEY
 }).register({
   'im.message.receive_v1': async (data) => {
-    const { event_id } = data
+    // handle each message only once
+    const messageID = data.message.message_id
+    if (!!cache.get(`message_id:${messageID}`)) return { code: 0 }
+    cache.set(`message_id:${messageID}`, true, 300)
 
-    // 对于同一个事件，只处理一次
-    const event = cache.get('event:' + event_id)
-    if (event !== undefined) return { code: 0 }
-    cache.set('event:' + event_id, true, 300)
+    const userID = data.sender.sender_id?.user_id || 'common'
 
-    let messageId = data.message.message_id
-
-    // 私聊直接回复
-    if (data.message.chat_type === 'p2p') {
-      // 不是文本消息，不处理
-      if (data.message.message_type !== 'text') {
-        await reply(messageId, '暂不支持其他类型的提问')
+    const messageHandler = async (content: string) => {
+      if (content === '/reset') {
+        cache.del(`session:${userID}`)
+        return await reply(messageID, '[COMMAND] Session reset successfully.')
+      } else {
+        const answer = await createCompletion(userID, content)
+        return await reply(messageID, answer)
       }
-      // 是文本消息，直接回复
-      const userInput = JSON.parse(data.message.content)
-      const openaiResponse = await getOpenAIReply(userInput.text)
-      await reply(messageId, openaiResponse)
     }
 
-    // 群聊，需要 @ 机器人
+    // private chat
+    if (data.message.chat_type === 'p2p') {
+      if (data.message.message_type === 'text') {
+        const userInput = JSON.parse(data.message.content)
+        await messageHandler(userInput.text)
+      }
+    }
+
+    // group chat, need to @ bot
     if (data.message.chat_type === 'group') {
-      // 这是日常群沟通，不用管
-      if (!data.message.mentions ||
-        data.message.mentions.length === 0) {
-        return { code: 0 }
+      if (data.message.mentions &&
+        data.message.mentions.length > 0 && data.message.mentions[0].name ===
+        env.LARK_APP_NAME) {
+        const userInput = JSON.parse(data.message.content)
+        await messageHandler(userInput.text.replace('@_user_1', '').trim())
       }
-      // 没有 mention 机器人，则退出。
-      if (data.message.mentions[0].name !== env.BOT_NAME) {
-        return { code: 0 }
-      }
-      const userInput = JSON.parse(data.message.content)
-      const question = userInput.text.replace('@_user_1', '')
-      const openaiResponse = await getOpenAIReply(question)
-      return await reply(messageId, openaiResponse)
+
     }
     return { code: 0 }
   }
@@ -116,5 +150,5 @@ app.use('/', lark.adaptExpress(eventDispatcher, {
 }))
 
 app.listen(env.PORT, () => {
-  console.log(`LarkGPT is now listening on port ${env.PORT}`)
+  console.info(`[LarkGPT] Now listening on port ${env.PORT}`)
 })
