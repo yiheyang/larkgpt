@@ -57,14 +57,14 @@ async function createCompletion (userID: string, question: string) {
     for (const item in session.reverse()) {
       const [q, a] = item
       const tempPrompt = `Human: ${q}\nAI: ${a}\n` + prompt
-      const finalPrompt = promptHead + tempPrompt + `Human: ${question}\n`
+      const finalPrompt = promptHead + tempPrompt + `Human: ${question}\nAI: `
       if (getTokenLength(finalPrompt) <= MAX_TOKEN_LENGTH -
         MAX_GENERATE_TOKEN_LENGTH) {
         prompt = tempPrompt
       } else break
     }
 
-    const finalPrompt = promptHead + prompt + `Human: ${question}\n`
+    const finalPrompt = promptHead + prompt + `Human: ${question}\nAI: `
 
     const result = await openai.createCompletion({
       model: 'text-davinci-003',
