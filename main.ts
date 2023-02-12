@@ -105,9 +105,9 @@ const eventDispatcher = new lark.EventDispatcher({
 
 app.use('/', (req, res, next) => {
   // 处理飞书开放平台的服务端校验
-  if (req.body.type == "url_verification") {
+  if (req.query.type == "url_verification") {
     return {
-      challenge: req.body.challenge
+      challenge: req.query.challenge
     }
   }
   next()
