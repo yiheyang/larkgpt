@@ -4,6 +4,7 @@ import bodyParser from 'body-parser'
 import { Configuration, OpenAIApi } from 'openai'
 import nodeCache from 'node-cache'
 import dotenv from 'dotenv'
+import { RequiredError } from 'openai/dist/base'
 
 const cache = new nodeCache()
 
@@ -43,19 +44,27 @@ async function reply (messageId: string, content: string) {
 async function getOpenAIReply (content: string) {
   const prompt = 'Q: ' + content + '\nA: '
 
-  const result = await openai.createCompletion({
-    model: 'text-davinci-003',
-    prompt: prompt,
-    max_tokens: 1200,
-    temperature: 0.9,
-    top_p: 1,
-    frequency_penalty: 0.0,
-    presence_penalty: 0.0,
-    stop: ['\n\n\n'],
-    stream: false
-  })
-
-  return result.data.choices[0].text!.replace('\n\n', '').trim()
+  try {
+    const result = await openai.createCompletion({
+      model: 'text-davinci-003',
+      prompt: prompt,
+      max_tokens: 1200,
+      temperature: 0.9,
+      top_p: 1,
+      frequency_penalty: 0.0,
+      presence_penalty: 0.0,
+      stop: ['\n\n\n'],
+      stream: false
+    })
+    result.status
+    return result.data.choices[0].text!.replace('\n\n', '').trim()
+  } catch (error: any) {
+    if (error.response) {
+      return `[ERROR:${error.response.status}] ${error.response.data}`
+    } else {
+      return `[ERROR] ${error.message}`
+    }
+  }
 }
 
 const eventDispatcher = new lark.EventDispatcher({
