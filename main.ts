@@ -1,5 +1,5 @@
 import express from 'express'
-import lark from '@larksuiteoapi/node-sdk'
+import * as lark from '@larksuiteoapi/node-sdk'
 import bodyParser from 'body-parser'
 import { Configuration, OpenAIApi } from "openai";
 import dotenv from 'dotenv'
