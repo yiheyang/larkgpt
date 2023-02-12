@@ -4,7 +4,6 @@ import bodyParser from 'body-parser'
 import { Configuration, OpenAIApi } from 'openai'
 import nodeCache from 'node-cache'
 import dotenv from 'dotenv'
-import { RequiredError } from 'openai/dist/base'
 
 const cache = new nodeCache()
 
@@ -60,7 +59,7 @@ async function getOpenAIReply (content: string) {
     return result.data.choices[0].text!.replace('\n\n', '').trim()
   } catch (error: any) {
     if (error.response) {
-      return `[ERROR:${error.response.status}] ${error.response.data}`
+      return `[ERROR:${error.response.status}] ${JSON.stringify(error.response.data)}`
     } else {
       return `[ERROR] ${error.message}`
     }
