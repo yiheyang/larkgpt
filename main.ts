@@ -66,6 +66,7 @@ async function createCompletion (userID: string, question: string) {
     }
 
     const finalPrompt = promptHead + prompt + `Human: ${question}\nAI: `
+    console.debug(finalPrompt)
 
     const result = await openai.createCompletion({
       model: 'text-davinci-003',
