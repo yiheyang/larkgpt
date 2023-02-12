@@ -1,8 +1,11 @@
 import express from 'express'
 import * as lark from '@larksuiteoapi/node-sdk'
 import bodyParser from 'body-parser'
-import { Configuration, OpenAIApi } from "openai";
+import { Configuration, OpenAIApi } from 'openai'
+import nodeCache from 'node-cache'
 import dotenv from 'dotenv'
+
+const cache = new nodeCache()
 
 dotenv.config()
 const env = process.env
@@ -17,9 +20,9 @@ const client = new lark.Client({
 })
 
 const configuration = new Configuration({
-  apiKey: env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
+  apiKey: env.OPENAI_API_KEY
+})
+const openai = new OpenAIApi(configuration)
 
 // 回复消息
 async function reply (messageId: string, content: string) {
@@ -59,6 +62,13 @@ const eventDispatcher = new lark.EventDispatcher({
   encryptKey: env.LARK_ENCRYPT_KEY
 }).register({
   'im.message.receive_v1': async (data: any) => {
+    const { event_id } = data
+
+    // 对于同一个事件，只处理一次
+    const event = cache.get('event:' + event_id)
+    if (event !== undefined) return { code: 0 }
+    cache.set('event:' + event_id, true, 300)
+
     let messageId = data.message.message_id
 
     // 私聊直接回复
@@ -78,19 +88,29 @@ const eventDispatcher = new lark.EventDispatcher({
       // 这是日常群沟通，不用管
       if (!data.message.mentions ||
         data.message.mentions.length === 0) {
-        return
+        return { code: 0 }
       }
       // 没有 mention 机器人，则退出。
       if (data.message.mentions[0].name !== env.BOT_NAME) {
-        return
+        return { code: 0 }
       }
       const userInput = JSON.parse(data.message.content)
       const question = userInput.text.replace('@_user_1', '')
       const openaiResponse = await getOpenAIReply(question)
-      await reply(messageId, openaiResponse)
-      return
+      return await reply(messageId, openaiResponse)
+    }
+    return { code: 0 }
+  }
+})
+
+app.use('/', (req, res, next) => {
+  // 处理飞书开放平台的服务端校验
+  if (req.body.type == "url_verification") {
+    return {
+      challenge: req.body.challenge
     }
   }
+  next()
 })
 
 app.use('/', lark.adaptExpress(eventDispatcher))
