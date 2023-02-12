@@ -18,7 +18,7 @@ app.use(bodyParser.json())
 const client = new lark.Client({
   appId: env.LARK_APP_ID || '',
   appSecret: env.LARK_APP_SECRET || '',
-  domain: env.LARK_DOMAIN
+  domain: env.LARK_DOMAIN || lark.Domain.Feishu
 })
 
 const configuration = new Configuration({
@@ -26,9 +26,12 @@ const configuration = new Configuration({
 })
 const openai = new OpenAIApi(configuration)
 
-const MAX_TOKEN_LENGTH = 4096
-const MAX_GENERATE_TOKEN_LENGTH = 1024
-const INIT_COMMAND = 'The following is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly.'
+const MAX_TOKEN_LENGTH = Number(env.MAX_TOKEN_LENGTH) || 4096
+const MAX_GENERATE_TOKEN_LENGTH = Number(env.MAX_GENERATE_TOKEN_LENGTH) || 1024
+const INIT_COMMAND = env.INIT_COMMAND ||
+  'The following is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly.'
+const TEXT_MODEL = env.TEXT_MODEL || 'text-davinci-003'
+const IMAGE_SIZE = env.IMAGE_SIZE || '1024x1024'
 
 async function reply (
   messageID: string, content: string) {
@@ -49,7 +52,6 @@ async function downloadFile (url: string) {
   return new Promise<Buffer>((resolve, reject) => {
     https.get(url, function (response) {
       if (response.statusCode !== 200) {
-        // || response.headers['content-type'] !== 'image/png'
         reject(new Error('Failed to download image.'))
       }
       response.setEncoding('binary')
@@ -122,7 +124,7 @@ async function createCompletion (userID: string, question: string) {
     const finalPrompt = promptHead + prompt + `Human: ${question}\nAI: `
 
     const result = await openai.createCompletion({
-      model: 'text-davinci-003',
+      model: TEXT_MODEL,
       prompt: finalPrompt,
       max_tokens: MAX_GENERATE_TOKEN_LENGTH,
       temperature: 0.9,
@@ -153,7 +155,7 @@ async function createImage (userID: string, prompt: string) {
     const result = await openai.createImage({
       prompt: prompt,
       n: 1,
-      size: '1024x1024'
+      size: IMAGE_SIZE as any
     })
     const url = result.data.data[0].url || ''
     if (!url) throw new Error('Failed to create image.')
