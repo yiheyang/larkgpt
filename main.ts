@@ -11,7 +11,7 @@ const cache = new nodeCache()
 dotenv.config()
 const env = process.env
 
-const server = http.createServer();
+const server = http.createServer()
 
 const client = new lark.Client({
   appId: env.LARK_APP_ID || '',
@@ -178,7 +178,8 @@ const eventDispatcher = new lark.EventDispatcher({
   'im.message.receive_v1': async (data) => {
     // check time range
     let currentTime = Date.now()
-    if (currentTime - Number(data.message.create_time) > 60 * 1000) return { code: 0 }
+    if (currentTime - Number(data.message.create_time) > 60 *
+      1000) return { code: 0 }
 
     // handle each message only once
     const messageID = data.message.message_id
@@ -221,7 +222,8 @@ const eventDispatcher = new lark.EventDispatcher({
         data.message.mentions.length > 0 && data.message.mentions[0].name ===
         env.LARK_APP_NAME) {
         const userInput = JSON.parse(data.message.content)
-        await messageHandler(userInput.text.replace(/@_user_[0-9]+/g, '').trim())
+        await messageHandler(
+          userInput.text.replace(/@_user_[0-9]+/g, '').trim())
       }
 
     }
@@ -229,7 +231,8 @@ const eventDispatcher = new lark.EventDispatcher({
   }
 })
 
-server.on('request', lark.adaptDefault('/event', eventDispatcher));
+server.on('request',
+  lark.adaptDefault('/event', eventDispatcher, { autoChallenge: true }))
 
-server.listen(env.PORT);
+server.listen(env.PORT)
 console.info(`[${env.LARK_APP_NAME}] Now listening on port ${env.PORT}`)
