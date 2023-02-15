@@ -32,6 +32,7 @@ yarn start # or `npm start`
 - im:message
 - im:message:send_as_bot
 - im:resource
+6. Turn on "Features/Bot" ability.
 
 ## Robot Command
 ```text

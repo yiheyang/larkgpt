@@ -1,19 +1,17 @@
-import express from 'express'
 import * as lark from '@larksuiteoapi/node-sdk'
-import bodyParser from 'body-parser'
 import { Configuration, OpenAIApi } from 'openai'
 import nodeCache from 'node-cache'
 import dotenv from 'dotenv'
 import { encode } from 'gpt-3-encoder'
 import https from 'https'
+import http from 'http'
 
 const cache = new nodeCache()
 
 dotenv.config()
 const env = process.env
 
-const app = express()
-app.use(bodyParser.json())
+const server = http.createServer();
 
 const client = new lark.Client({
   appId: env.LARK_APP_ID || '',
@@ -231,10 +229,7 @@ const eventDispatcher = new lark.EventDispatcher({
   }
 })
 
-app.use('/', lark.adaptExpress(eventDispatcher, {
-  autoChallenge: true
-}))
+server.on('request', lark.adaptDefault('/event', eventDispatcher));
 
-app.listen(env.PORT, () => {
-  console.info(`[${env.LARK_APP_NAME}] Now listening on port ${env.PORT}`)
-})
+server.listen(env.PORT);
+console.info(`[${env.LARK_APP_NAME}] Now listening on port ${env.PORT}`)
