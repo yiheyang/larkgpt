@@ -105,7 +105,7 @@ function errorHandler (error: any) {
 }
 
 async function createCompletion (userID: string, question: string) {
-  console.info(`[Lark] Receive from ${userID}: ${question}`)
+  console.info(`[${env.LARK_APP_NAME}] Receive from ${userID}: ${question}`)
 
   try {
     let session: [string, string][] = cache.get(`session:${userID}`) || []
@@ -134,7 +134,7 @@ async function createCompletion (userID: string, question: string) {
       stop: ['Human:', 'AI:']
     })
     const answer = result.data.choices[0].text!.trim()
-    console.info(`[OpenAI] Reply to ${userID}: ${answer}`)
+    console.info(`[${env.LARK_APP_NAME}] Reply to ${userID}: ${answer}`)
 
     // save to session with 1 day ttl
     // need to get the latest data again
@@ -154,7 +154,6 @@ async function createImage (userID: string, prompt: string) {
   try {
     const result = await openai.createImage({
       prompt: prompt,
-      n: 1,
       size: IMAGE_SIZE as any
     })
     const url = result.data.data[0].url || ''
@@ -220,7 +219,7 @@ const eventDispatcher = new lark.EventDispatcher({
         data.message.mentions.length > 0 && data.message.mentions[0].name ===
         env.LARK_APP_NAME) {
         const userInput = JSON.parse(data.message.content)
-        await messageHandler(userInput.text.replace('@_user_1', '').trim())
+        await messageHandler(userInput.text.replace(/@_user_[0-9]+/g, '').trim())
       }
 
     }
@@ -233,5 +232,5 @@ app.use('/', lark.adaptExpress(eventDispatcher, {
 }))
 
 app.listen(env.PORT, () => {
-  console.info(`[LarkGPT] Now listening on port ${env.PORT}`)
+  console.info(`[${env.LARK_APP_NAME}] Now listening on port ${env.PORT}`)
 })
