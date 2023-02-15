@@ -178,6 +178,10 @@ const eventDispatcher = new lark.EventDispatcher({
   encryptKey: env.LARK_ENCRYPT_KEY
 }).register({
   'im.message.receive_v1': async (data) => {
+    // check time range
+    let currentTime = Date.now()
+    if (currentTime - Number(data.message.create_time) > 60 * 1000) return { code: 0 }
+
     // handle each message only once
     const messageID = data.message.message_id
     if (!!cache.get(`message_id:${messageID}`)) return { code: 0 }
