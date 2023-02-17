@@ -33,17 +33,21 @@ const IMAGE_SIZE = env.IMAGE_SIZE || '1024x1024'
 
 async function reply (
   messageID: string, content: string) {
-  return await client.im.message.reply({
-    path: {
-      message_id: messageID
-    },
-    data: {
-      content: JSON.stringify({
-        'text': content
-      }),
-      msg_type: 'text'
-    }
-  })
+  try {
+    return await client.im.message.reply({
+      path: {
+        message_id: messageID
+      },
+      data: {
+        content: JSON.stringify({
+          'text': content
+        }),
+        msg_type: 'text'
+      }
+    })
+  } catch (error) {
+    errorHandler(error)
+  }
 }
 
 async function downloadFile (url: string) {
