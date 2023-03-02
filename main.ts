@@ -1,5 +1,10 @@
 import * as lark from '@larksuiteoapi/node-sdk'
-import { Configuration, OpenAIApi } from 'openai'
+import {
+  ChatCompletionRequestMessage,
+  ChatCompletionRequestMessageRoleEnum,
+  Configuration,
+  OpenAIApi
+} from 'openai'
 import nodeCache from 'node-cache'
 import dotenv from 'dotenv'
 import { encode } from 'gpt-3-encoder'
@@ -111,31 +116,43 @@ async function createCompletion (userID: string, question: string) {
 
   try {
     let session: [string, string][] = cache.get(`session:${userID}`) || []
-    let promptHead = `${INIT_COMMAND}\n\n`
+    let promptHead = `${INIT_COMMAND} `
     let prompt = ''
+    let messages: ChatCompletionRequestMessage[] = []
+
     for (let index = session.length - 1; index >= 0; index--) {
       const [q, a] = session[index]
-      const tempPrompt = `Human: ${q}\nAI: ${a}\n` + prompt
-      const finalPrompt = promptHead + tempPrompt + `Human: ${question}\nAI: `
+      messages.unshift({
+        role: ChatCompletionRequestMessageRoleEnum.User,
+        content: q
+      }, {
+        role: ChatCompletionRequestMessageRoleEnum.Assistant,
+        content: a
+      })
+      const tempPrompt = `${q} ${a} ` + prompt
+      const finalPrompt = promptHead + tempPrompt + `${question} `
       if (getTokenLength(finalPrompt) <= MAX_TOKEN_LENGTH -
         MAX_GENERATE_TOKEN_LENGTH) {
         prompt = tempPrompt
+        messages.shift()
       } else break
     }
 
-    const finalPrompt = promptHead + prompt + `Human: ${question}\nAI: `
+    messages.unshift({
+      role: ChatCompletionRequestMessageRoleEnum.System,
+      content: INIT_COMMAND
+    })
 
-    const result = await openai.createCompletion({
+    const result = await openai.createChatCompletion({
+      messages: messages,
       model: TEXT_MODEL,
-      prompt: finalPrompt,
       max_tokens: MAX_GENERATE_TOKEN_LENGTH,
       temperature: 0.9,
       top_p: 1,
       frequency_penalty: 0.0,
-      presence_penalty: 0.6,
-      stop: ['Human:', 'AI:']
+      presence_penalty: 0.6
     })
-    const answer = result.data.choices[0].text!.trim()
+    const answer = result.data.choices[0].message!.content.trim()
     console.info(`[${env.LARK_APP_NAME}] Reply to ${userID}: ${answer}`)
 
     // save to session with 1 day ttl
