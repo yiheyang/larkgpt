@@ -143,6 +143,11 @@ async function createCompletion (userID: string, question: string) {
       content: INIT_COMMAND
     })
 
+    messages.push({
+      role: ChatCompletionRequestMessageRoleEnum.User,
+      content: question
+    })
+
     const result = await openai.createChatCompletion({
       messages: messages,
       model: TEXT_MODEL,
