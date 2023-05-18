@@ -1,0 +1,11 @@
+# docker-compose.yam file for running a web service. the image is build from the Dockerfile and the image name is larkgpt.
+version: '3'
+services:
+  larkgpt:
+    build: .
+    image: larkgpt
+    container_name: larkgpt
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env

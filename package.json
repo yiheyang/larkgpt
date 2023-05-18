@@ -4,7 +4,7 @@
   "main": "main.ts",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node main.ts"
+    "start": "ts-node main.ts --host 0.0.0.0"
   },
   "dependencies": {
     "@larksuiteoapi/node-sdk": "^1.11.0",
