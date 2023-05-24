@@ -35,6 +35,9 @@ const INIT_COMMAND = env.INIT_COMMAND ||
   'The following is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly.'
 const TEXT_MODEL = env.TEXT_MODEL || 'text-davinci-003'
 const IMAGE_SIZE = env.IMAGE_SIZE || '1024x1024'
+const HELP_MESSAGE = env.HELP_MESSAGE || `/help help message
+/reset # Reset user's session context
+/img <prompt> # Generate an image with the given prompt`
 
 async function reply (
   messageID: string, content: string) {
@@ -219,6 +222,8 @@ const eventDispatcher = new lark.EventDispatcher({
         if (content === '/reset') {
           cache.del(`session:${userID}`)
           return await reply(messageID, '[COMMAND] Session reset successfully.')
+        } else if (content === '/help') {
+          return await reply(messageID, HELP_MESSAGE)
         } else if (content.match(/^\/img \S+/)) {
           const imageKey = await createImage(userID,
             content.replace(/^\/img /, ''))
@@ -260,5 +265,9 @@ const eventDispatcher = new lark.EventDispatcher({
 server.on('request',
   lark.adaptDefault('/event', eventDispatcher, { autoChallenge: true }))
 
-server.listen(env.PORT)
+server.listen({
+  host: env.LISTEN_IP,
+  port: env.PORT
+})
+
 console.info(`[${env.LARK_APP_NAME}] Now listening on port ${env.PORT}`)

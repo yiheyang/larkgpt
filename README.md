@@ -27,7 +27,7 @@ cp .env.example .env
 ```bash
 yarn start # or `npm start`
 ```
-4. Configure "Request URL" with `http(s)://domain:port` and add "Message received [v2.0] - im.message.receive_v1" event in "Event Subscription" - "Lark Developer App Panel".
+4. Configure "Request URL" with `http(s)://domain:port/event` and add "Message received [v2.0] - im.message.receive_v1" event in "Event Subscription" - "Lark Developer App Panel".
 5. Go to "Permissions & Scopes" and add all permissions that "im.message.receive_v1" requires and the following permissions.
 - im:message
 - im:message:send_as_bot
@@ -36,6 +36,7 @@ yarn start # or `npm start`
 
 ## Robot Command
 ```text
+/help help message
 /reset # Reset user's session context
 /img <prompt> # Generate an image with the given prompt
 ```
